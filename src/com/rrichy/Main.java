@@ -33,7 +33,6 @@ public class Main {
 //        sudoku.printDLXMatrix();
 //        sudoku.test();
         sudoku.solve();
-        sudoku.printDLXMatrix();
         System.out.println("");
         System.out.print("Finished in " + (new Date().getTime() - t0) + "ms.");
 //        System.out.println(sudoku.size);
