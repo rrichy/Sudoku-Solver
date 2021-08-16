@@ -1,41 +1,47 @@
 package com.rrichy;
 
-import com.rrichy.DLXNode;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.HashSet;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.*;
 
 public class SudokuSolver {
-    private  DLXNode rootNode = new DLXNode(-1,-1, 0, null, -1, - 1, -1);
-    private int[][] board;
+    private final DLXNode rootNode = new DLXNode(-1,-1, 0, null, -1, - 1, -1);
+    private int numSolutions = 0;
     private final int size, matrixRow, matrixCol;
-    private boolean matrixFilled = false;
-    private ArrayList<DLXNode[]> dlx;
-    private ArrayList<DLXNode> dlxHeaders;
-    private HashSet<Integer> rowFilter = new HashSet<Integer>();
-    private ArrayList<int[]> clues = new ArrayList<int[]>();
-    private ArrayList<int[]> solution = new ArrayList<int[]>();
+    private boolean matrixFilled = false, continueSolving = true;
+    private final ArrayList<DLXNode[]> dlx;
+    private final ArrayList<DLXNode> dlxHeaders;
+    private final HashSet<Integer> rowFilter = new HashSet<>();
+    private final HashSet<DLXNode> headerFilter = new HashSet<>();
+    private final ArrayList<int[]> clues = new ArrayList<>();
+    private final ArrayList<int[]> solution = new ArrayList<>();
+    private final ArrayList<int[][]> solutions = new ArrayList<>();
 
     public SudokuSolver(int[][] p) {
         if(p.length != p[0].length) System.out.println("The puzzle is not a square");
-        this.board = p;
         this.size = p.length;
         this.matrixRow = size*size*size;
         this.matrixCol = size*size*4;
-        this.dlx = new ArrayList<DLXNode[]>();
-        this.dlxHeaders = new ArrayList<DLXNode>();
-
+        this.dlx = new ArrayList<>();
+        this.dlxHeaders = new ArrayList<>();
 
         // transform the puzzle clues into an array of [row, col, val]
-
         for(int row = 0; row < size; row++) {
             for(int col = 0; col < size; col++) {
-                if(board[row][col] != 0) {
-                    int[] clue = new int[] {row, col, board[row][col]};
+                if(p[row][col] != 0) {
+                    int[] clue = new int[] {row, col, p[row][col]};
                     this.clues.add(clue);
                 }
             }
         }
+
+        // Check first if board is valid
+
+        createDLXMatrix();
+        getSolved();
+
+        System.out.println("No more solutions found.");
+        System.out.println("Number of solution/s: " + solutions.size());
     }
 
     // Sudoku will always have 4 constraints. All rows/cols/grid should have a digit
@@ -56,34 +62,39 @@ public class SudokuSolver {
         for(int curRow = 0; curRow < size; curRow++) {
             for(int curCol = 0; curCol < size; curCol++) {
                 for(int val = 0; val < size; val++) {
+                    int square = size * size;
                     //cell - row - col - grid
-                    DLXNode[] cell = new DLXNode[size * size];
-                    DLXNode[] row = new DLXNode[size * size];
-                    DLXNode[] col = new DLXNode[size * size];
-                    DLXNode[] grid = new DLXNode[size * size];
+                    DLXNode[] cell = new DLXNode[square];
+                    DLXNode[] row = new DLXNode[square];
+                    DLXNode[] col = new DLXNode[square];
+                    DLXNode[] grid = new DLXNode[square];
 
                     int sqrt = (int) Math.sqrt(size);
                     int gridN = Math.floorDiv(curRow, sqrt) * sqrt + Math.floorDiv(curCol, sqrt);
-                    int matRow = size*size*curRow + size*curCol + val;
+                    int matRow = square * curRow + size * curCol + val;
 
-                    cell[size * curRow + curCol] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(size * curRow + curCol), matRow, size * curRow + curCol, -1);
-                    row[size * curRow + val] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(size * curRow + val + size*size), matRow, size * curRow + val + size*size, -1);
-                    col[size * curCol + val] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(size * curCol + val + size*size*2), matRow, size * curCol + val + size*size*2, -1);
-                    grid[size * gridN + val] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(size * gridN + val + size*size*3), matRow, size * gridN + val + size*size*3, -1);
+                    int cellIndex = size * curRow + curCol;
+                    int rowIndex = size * curRow + val;
+                    int colIndex = size * curCol + val;
+                    int gridIndex = size * gridN + val;
 
-                    linkLeftRight(cell[size * curRow + curCol], row[size * curRow + val]);
-                    linkLeftRight(row[size * curRow + val], col[size * curCol + val]);
-                    linkLeftRight(col[size * curCol + val], grid[size * gridN + val]);
-                    linkLeftRight(grid[size * gridN + val], cell[size * curRow + curCol]);
+                    cell[cellIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(cellIndex), matRow, cellIndex, -1);
+                    row[rowIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(rowIndex + square), matRow, rowIndex + square, -1);
+                    col[colIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(colIndex + square*2), matRow, colIndex + square*2, -1);
+                    grid[gridIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(gridIndex + square*3), matRow, gridIndex + square*3, -1);
+
+                    linkLeftRight(cell[cellIndex], row[rowIndex]);
+                    linkLeftRight(row[rowIndex], col[colIndex]);
+                    linkLeftRight(col[colIndex], grid[gridIndex]);
+                    linkLeftRight(grid[gridIndex], cell[cellIndex]);
 
                     DLXNode[] constraints = new DLXNode[matrixCol];
-                    for(int i = 0; i < cell.length; i++) constraints[i] = cell[i];
-                    for(int i = 0; i < row.length; i++) constraints[i+size*size] = row[i];
-                    for(int i = 0; i < col.length; i++) constraints[i+size*size*2] = col[i];
-                    for(int i = 0; i < grid.length; i++) constraints[i+size*size*3] = grid[i];
+                    System.arraycopy(cell, 0, constraints, 0, cell.length);
+                    System.arraycopy(row, 0, constraints, square, row.length);
+                    System.arraycopy(col, 0, constraints, square * 2, col.length);
+                    System.arraycopy(grid, 0, constraints, square * 3, grid.length);
 
                     dlx.add(constraints);
-//                    dlx[curRow*size*size + curCol*size + val] = constraints;
                 }
             }
         }
@@ -111,8 +122,8 @@ public class SudokuSolver {
             int remCol = clue[0] * size + clue[1];
             DLXNode header = rootNode.right;
             while(header.matCol != remCol) header = header.right;
-            coverColumn(header);
 
+            coverColumn(header);
             DLXNode clueCell = header.bottom;
             while(clueCell.value != clue[2]) clueCell = clueCell.bottom;
 
@@ -120,22 +131,24 @@ public class SudokuSolver {
         }
     }
 
-    private void linkLeftRight(DLXNode posA, DLXNode posB) { // posA is on left of posB, posB is on right of posA
+    private void linkLeftRight(@NotNull DLXNode posA, @NotNull DLXNode posB) { // posA is on left of posB, posB is on right of posA
         posA.setRight(posB);
         posB.setLeft(posA);
     }
 
-    private void linkUpDown(DLXNode posA, DLXNode posB) { // posA is on top of posB, posB is below posA
+    private void linkUpDown(@NotNull DLXNode posA, @NotNull DLXNode posB) { // posA is on top of posB, posB is below posA
         posA.setBottom(posB);
         posB.setTop(posA);
     }
 
-    // Visualizing the matrix
+    // Visualizing the DLX matrix
     public void printDLXMatrix() {
         if(!matrixFilled) System.out.println("Sparse Matrix has not been filled yet. Run the fillMatrix method first.");
         else {
+
             int colCount = 0, rowCount = 0;
             DLXNode header = rootNode.right;
+            System.out.print("" + "\t");
             while(header != rootNode){
                 colCount++;
                 System.out.print(header.matCol + "\t");
@@ -147,12 +160,13 @@ public class SudokuSolver {
                     rowCount++;
                     System.out.println("");
                     header = rootNode.right;
+                    System.out.print(i + "\t");
                     while(header != rootNode) {
                         DLXNode current = header.bottom;
                         while(current.matRow < i && current != header) current = current.bottom;
 
                         if(current.matRow == i) System.out.print(current.value + "\t");
-                        else System.out.print("0" + "\t");
+                        else System.out.print("" + "\t");
                         header = header.right;
                     }
                 }
@@ -162,26 +176,54 @@ public class SudokuSolver {
         }
     }
 
-    public void solve() {
-        if(rootNode.right == rootNode) System.out.println("Puzzle Solved!");
+    public void getSolved() {
+        if(rootNode.right == rootNode) {
+            saveSolution();
+            numSolutions++;
+            System.out.println("Solution " + numSolutions + ":");
+            printBoard(solutions.get(solutions.size() - 1));
+
+            boolean validInput = false;
+
+            while(!validInput) {
+                Scanner ask = new Scanner(System.in);
+                System.out.println("Continue searching? Enter Y/N:");
+                String input = ask.nextLine();
+
+                if(input.equals("Y")) {
+                    this.continueSolving = true;
+                    validInput = true;
+                }
+                else if(input.equals("N")) {
+                    this.continueSolving = false;
+                    validInput = true;
+                }
+                else System.out.println("Error input!");
+            }
+        }
         else {
             DLXNode header = findLeastColumn();
+            if(header == null) return;
             coverColumn(header);
 
-//            DLXNode node = header.bottom;
             for(DLXNode node = header.bottom; node != header; node = node.bottom) {
                 solution.add(node.puzzleValues());
-                for(DLXNode nodeRight = node.right; nodeRight != node; nodeRight = nodeRight.right) coverColumn(nodeRight);
-                solve();
+
+                for(DLXNode nodeRight = node.right; nodeRight != node; nodeRight = nodeRight.right)
+                    coverColumn(nodeRight);
+
+                getSolved();
+
+                if(this.continueSolving) {
+                    solution.remove(solution.size() - 1);
+                    for (DLXNode nodeLeft = node.left; nodeLeft != node; nodeLeft = nodeLeft.left)
+                        uncoverColumn(nodeLeft);
+                }
+                else break;
             }
+            if(this.continueSolving) uncoverColumn(header);
 
-//            for(DLXNode nodeLeft = node.left; nodeLeft != node; nodeLeft = nodeLeft.left) uncoverColumn(nodeLeft);
-//            uncoverColumn(header);
-
-            System.out.println("Looped out!");
         }
-
-        printDLXMatrix();
     }
 
     private DLXNode findLeastColumn() {
@@ -203,6 +245,7 @@ public class SudokuSolver {
 
     private void coverColumn(DLXNode c) {
         DLXNode header = c;
+
         if(!header.header) header = header.colHeader;
         header.left.setRight(header.right);
         header.right.setLeft(header.left);
@@ -223,87 +266,32 @@ public class SudokuSolver {
         for(DLXNode node = header.top; node != header; node = node.top) {
             rowFilter.remove(node.matRow);
             for(DLXNode nodeLeft = node.left; node != nodeLeft; nodeLeft = nodeLeft.left) {
-                nodeLeft.top.setBottom(nodeLeft.bottom);
-                nodeLeft.bottom.setTop(nodeLeft.top);
-
+                nodeLeft.top.setBottom(nodeLeft);
+                nodeLeft.bottom.setTop(nodeLeft);
             }
         }
         header.left.setRight(header);
         header.right.setLeft(header);
     }
 
-//    private void trimMatrix(int[] clue) {
-//        DLXNode current = rootNode.right;
-//        int remCol = clue[0] * size + clue[1];
-//
-//        while(current.matCol != remCol) current = current.right;
-//        coverNode(current); // cover header
-//        current.clearChild();
-//
-//        while(current.value != clue[2]) current = current.bottom; // find the correct cell
-//
-//        DLXNode row = current.bottom;
-//
-//        while(row != current) { // cover column nodes except for the hint cell
-//            coverNode(row);
-//            row = row.bottom;
-//        }
-//        coverNode(current); // cover hint cell then move to the next
-//
-//        current = current.right;
-//        while(current.right != current) {
-//            row = current.bottom;
-//
-//            while (row != current) {
-//                if (!row.header) coverRow(row);
-//                else {
-//                    coverNode(row);
-//                    row.clearChild();
-//                }
-//                row = row.bottom;
-//            }
-//            coverNode(current);
-//            current = current.right;
-//        }
-//
-//        row = current.bottom;
-//        while (row != current) {
-//            if (!row.header) coverRow(row);
-//            else coverNode(row);
-//            row = row.bottom;
-//        }
-//        coverNode(current);
-//    }
+    public void printBoard(int[][] answer) {
+        String div = "";
+        int sqrt = (int) Math.sqrt(size);
+        for(int i = 0; i < size + 3*(sqrt-1); i++) div += "--";
+        for(int row = 0; row < size; row++) {
+            if(row != 0 && row % sqrt == 0) System.out.println(div);
+            for(int col = 0; col < size; col++) {
+                if(col % sqrt == 0 && col != 0) System.out.print("|\t");
+                System.out.print(answer[row][col] + "\t");
+            }
+            System.out.println("");
+        }
+    }
 
-//    public ArrayList<int[]> algorithmX(ArrayList<int[]> moves) {
-//        if(rootNode.right == rootNode) return null; // matrix is empty
-//        // check for empty header
-//        int minChild = size;
-//        DLXNode header = rootNode.right;
-//        DLXNode currentHeader = header;
-//        while(header != rootNode) {
-//            if(header.nChild == 0) return null; // invalid move
-//            if(header.nChild < minChild) {
-//                minChild = header.nChild;
-//                currentHeader = header;
-//
-//                if(header.nChild == 1) break;
-//            }
-//            header = header.right;
-//        }
-//
-//        DLXNode currentNode = currentHeader.bottom;
-//        while(currentNode != currentHeader) {
-//            int[] move = new int[] {currentNode.row, currentNode.col, currentNode.value};
-//            moves.add(move);
-//            trimMatrix(move);
-//
-//            ArrayList<int[]> recur = algorithmX(moves);
-//
-////            if(recur == null)
-//
-//        }
-//        return null;
-//    }
+    private void saveSolution() {
+        int[][] singleSolution = new int[size][size];
+        for(int[] sol : solution) singleSolution[sol[0]][sol[1]] = sol[2];
 
+        solutions.add(singleSolution);
+    }
 }

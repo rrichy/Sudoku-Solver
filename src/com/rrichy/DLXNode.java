@@ -58,6 +58,10 @@ public class DLXNode {
         return new int[] {row, col, value};
     }
 
+    public void printInfo() {
+        System.out.println("(" + row + ", " + col + ", " + value + ")\tmatCol: " + matCol + "\tmatRow: " + matRow + "\tisHeader: " + header);
+    }
+
     public String test() {
         return "[" + row + ", " + col + ", " + value + ", " + matCol + "]";
     }
