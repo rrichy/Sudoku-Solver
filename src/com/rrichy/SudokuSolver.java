@@ -4,10 +4,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+// This Sudoku solver only solves puzzles that are NxN size,
+// where N is a perfect square.
+
 public class SudokuSolver {
     private final DLXNode rootNode = new DLXNode(-1,-1, 0, null, -1, - 1, -1);
     private int numSolutions = 0;
-    private final int size, matrixRow, matrixCol;
+    private final int size, square, sqrt, matrixRow, matrixCol;
     private boolean matrixFilled = false, continueSolving = true;
     private final ArrayList<DLXNode[]> dlx;
     private final ArrayList<DLXNode> dlxHeaders;
@@ -17,12 +20,14 @@ public class SudokuSolver {
 
     public SudokuSolver(int[][] p) {
         this.size = p.length;
+        this.square = size * size;
+        this.sqrt = (int) Math.sqrt(size);
+        this.matrixRow = square * size;
+        this.matrixCol = square * 4;
 
         // Check first if board is valid
+        boardIsValid(p);
 
-        if(p.length != p[0].length) System.out.println("The puzzle is not a square");
-        this.matrixRow = size*size*size;
-        this.matrixCol = size*size*4;
         this.dlx = new ArrayList<>();
         this.dlxHeaders = new ArrayList<>();
 
@@ -66,11 +71,50 @@ public class SudokuSolver {
         System.out.println("Number of solution/s: " + numSolutions);
     }
 
-//    private boolean boardIsValid(int[][] board) {
-//        for(int i = 0; i < size; i++) if(board[i].length != size) return false;
-//
-//
-//    }
+    private void boardIsValid(int[][] board) throws InputMismatchException {
+        for(int i = 0; i < size; i++) if(board[i].length != size) throw new InputMismatchException("The puzzle is not a square!");
+
+        // row & col check
+        for(int i = 0; i < size; i++) {
+            HashSet<Integer> row = new HashSet<>();
+            HashSet<Integer> col = new HashSet<>();
+            for(int j = 0; j < size; j++) {
+                // row check
+                int rowVal = board[i][j];
+
+                if(!row.contains(rowVal)) {
+                    if(rowVal != 0) row.add(rowVal);
+                }
+                else throw new InputMismatchException("The puzzle is invalid! Duplicate value on row: " + i + "." + j);
+
+                // col check
+                int colVal = board[j][i];
+
+                if(!col.contains(colVal)) {
+                    if (colVal != 0) col.add(colVal);
+                }
+                else throw new InputMismatchException("The puzzle is invalid! Duplicate value on column: " + i + ".");
+            }
+        }
+
+        //grid check
+        for(int row = 0; row < size; row += sqrt) {
+            for(int col = 0; col < size; col += sqrt) {
+                HashSet<Integer> grid = new HashSet<>();
+
+                for(int i = row; i < row + sqrt; i++) {
+                    for(int j = col; j < col + sqrt; j++) {
+                        int gridVal = board[i][j];
+
+                        if(!grid.contains(gridVal)) {
+                            if (gridVal != 0) grid.add(gridVal);
+                        }
+                        else throw new InputMismatchException("The puzzle is invalid!" + gridVal);
+                    }
+                }
+            }
+        }
+    }
 
     // Sudoku will always have 4 constraints. All rows/cols/grid should have a digit
     // from 1 to its size with no repeat. All cell should be filled.
@@ -90,14 +134,12 @@ public class SudokuSolver {
         for(int curRow = 0; curRow < size; curRow++) {
             for(int curCol = 0; curCol < size; curCol++) {
                 for(int val = 0; val < size; val++) {
-                    int square = size * size;
                     //cell - row - col - grid
                     DLXNode[] cell = new DLXNode[square];
                     DLXNode[] row = new DLXNode[square];
                     DLXNode[] col = new DLXNode[square];
                     DLXNode[] grid = new DLXNode[square];
 
-                    int sqrt = (int) Math.sqrt(size);
                     int gridN = Math.floorDiv(curRow, sqrt) * sqrt + Math.floorDiv(curCol, sqrt);
                     int matRow = square * curRow + size * curCol + val;
 
@@ -108,8 +150,8 @@ public class SudokuSolver {
 
                     cell[cellIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(cellIndex), matRow, cellIndex, -1);
                     row[rowIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(rowIndex + square), matRow, rowIndex + square, -1);
-                    col[colIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(colIndex + square*2), matRow, colIndex + square*2, -1);
-                    grid[gridIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(gridIndex + square*3), matRow, gridIndex + square*3, -1);
+                    col[colIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(colIndex + square * 2), matRow, colIndex + square * 2, -1);
+                    grid[gridIndex] = new DLXNode(curRow, curCol, val+1, dlxHeaders.get(gridIndex + square * 3), matRow, gridIndex + square * 3, -1);
 
                     linkLR(cell[cellIndex], row[rowIndex]);
                     linkLR(row[rowIndex], col[colIndex]);
