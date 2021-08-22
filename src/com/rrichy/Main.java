@@ -9,7 +9,7 @@ import java.awt.event.ActionListener;
 public class Main {
 
     public static void main(String[] args) {
-        new WindowFrame();
+        new MainFrame();
 
 //        long t0 = new Date().getTime();
 //
