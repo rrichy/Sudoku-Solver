@@ -13,6 +13,7 @@ public class MainFrame extends JFrame implements ActionListener {
     private JButton btn3 = createButton("16x16");
     private JButton btn4 = createButton("25x25");
     private JButton solveBtn = createButton("Solve!");
+    private JButton clearBtn = createButton("Clear");
     private JPanel boardSizesPanel, boardPanel, commandPanel;
     private Board board;
 
@@ -37,7 +38,9 @@ public class MainFrame extends JFrame implements ActionListener {
 
         commandPanel = new JPanel();
         commandPanel.setBackground(Color.magenta);
+
         commandPanel.add(solveBtn);
+        commandPanel.add(clearBtn);
 
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setTitle("Sudoku Solver by rrichy");
@@ -70,40 +73,16 @@ public class MainFrame extends JFrame implements ActionListener {
             button.setEnabled(false);
             handleBoardSizeChange(e);
         }
-        else if(e.getSource() == solveBtn) {
-            int[][] puzzle = new int[board.nRows][board.nCols];
-            boolean numerical = board.nRows < 10;
+        else if(e.getSource() == solveBtn) board.solveBoard();
+        else if(e.getSource() == clearBtn) {
+            boardPanel.removeAll();
+            int nRows = board.nRows;
+            int nCols = board.nCols;
 
-            // storing all the values from the ArrayList rows to a type int[][] variable
-            IntStream.range(0, board.nRows).forEach(rowIndex -> {
-                puzzle[rowIndex] = board.rows.get(rowIndex).stream().mapToInt(cell -> {
-                    String text = cell.getText();
-                    if(text.equals("")) return 0;
+            board = new Board(nRows, nCols);
+            boardPanel.add(board);
 
-                    if(numerical) return Integer.parseInt(text);
-                    else return text.charAt(0) - 64;
-                }).toArray();
-            });
-
-            for(int[] row : puzzle) System.out.println(Arrays.toString(row));
-
-            // the type int[][] variable is passed to the sudoku solving algorithm
-            SudokuSolver sudoku = new SudokuSolver(puzzle);
-            int[][] solution = sudoku.solve();
-
-            IntStream.range(0, board.nRows).forEach(rowIndex -> {
-                ArrayList<JButton> currentRow = board.rows.get(rowIndex);
-
-                IntStream.range(0, board.nCols).forEach(colIndex -> {
-                    JButton cell = currentRow.get(colIndex);
-                    if(cell.getText().equals("")) {
-                        if(numerical) cell.setText(String.valueOf(solution[rowIndex][colIndex]));
-                        else cell.setText(String.valueOf((char) (solution[rowIndex][colIndex] + 64)));
-                        cell.setForeground(Color.red);
-                    }
-                });
-            });
-
+            refresh();
         }
         else {
 //            handleHighlightSelection(button);
@@ -118,6 +97,10 @@ public class MainFrame extends JFrame implements ActionListener {
         if(e.getSource() == btn4) board = new Board(25,25);
         boardPanel.add(board);
 
+        refresh();
+    }
+
+    private void refresh() {
         this.pack();
         validate();
         repaint();
