@@ -5,13 +5,19 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
+
 public class Board extends JPanel {
+    private Color CellBackground, Highlight, SubHighlight, DimHighlight, FixedColor, SolutionColor, ConflictedColor;
     public final int nRows, nCols, gridRowSize, gridColSize;
     public int[][] values;
-    public final ArrayList<ArrayList<JButton>> cells;
+    private HashMap<Integer, JPanel> grids;
+    public HashMap<Integer, JButton> cells;
+    private final boolean charNumerical;
     private final char[] validChar = new char[2];
 
     Board(int nRows, int nCols) {
@@ -21,7 +27,9 @@ public class Board extends JPanel {
         this.gridColSize = (int) Math.sqrt(nCols);
         this.values = new int[nRows][nCols];
 
-        if(nRows < 10 && nCols < 10) {
+        this.charNumerical = nRows < 10;
+
+        if(charNumerical) {
             validChar[0] = '1';
             validChar[1] = (char) ('1' + nRows);
         }
@@ -30,34 +38,49 @@ public class Board extends JPanel {
             validChar[1] = (char) ('a' + nRows);
         }
 
-        this.cells = new ArrayList<>();
+        initializeColors();
 
-        // fill the arraylist with another arraylist, so we can use add method
-        int n = 0;
-        while(n++ < nRows) cells.add(new ArrayList<>());
+        this.grids = new HashMap<>();
+        this.cells = new HashMap<>();
 
-        this.setPreferredSize(new Dimension(30 * nRows, 30* nCols));
-        this.setLayout(new GridLayout(gridRowSize, gridColSize, 1, 1));
-        this.setBorder(BorderFactory.createLineBorder(Color.black, 1));
+//        this.setPreferredSize(new Dimension(30 * nRows, 30* nCols));
+        this.setLayout(new GridLayout(gridRowSize, gridColSize, 2, 2));
+        this.setBorder(BorderFactory.createLineBorder(FixedColor, 2));
+        this.setBackground(Color.black);
 
         for(int i = 0; i < nRows; i += gridRowSize) {
             for(int j = 0; j < nCols; j += gridColSize) {
-                this.add(createBoardGrid(i, j));
+                JPanel gridPanel = createGridPanel();
+                grids.put(generateHash(i, j), gridPanel);
+
+                this.add(gridPanel);
+            }
+        }
+
+        for(int r = 0; r < nRows; r++) {
+            for(int c = 0; c < nCols; c++) {
+                JButton cell = createCellButton(r, c);
+
+                int[] origin = getGridOrigin(r, c);
+                grids.get(generateHash(origin[0], origin[1])).add(cell);
             }
         }
     }
 
-    private JPanel createBoardGrid(int r, int c) {
+    private void initializeColors() {
+        CellBackground = Color.white;
+        Highlight = Color.decode("0x8CD1FB");
+        SubHighlight = Color.decode("0xBBE4FD");
+        DimHighlight = Color.decode("0xE0F3FE");
+        FixedColor = Color.black;
+        SolutionColor = Color.decode("0x21a5f9");
+        ConflictedColor = Color.red;
+    }
+
+    private JPanel createGridPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(gridRowSize, gridColSize));
-        panel.setPreferredSize(new Dimension(30*r, 30*r));
-
-        for(int i = r; i < r + gridRowSize; i++) {
-            for(int j = c; j < c + gridColSize; j++) {
-                JButton cell = createCellButton(i, j);
-                panel.add(cell);
-            }
-        }
+        panel.setPreferredSize(new Dimension(30*gridRowSize, 30*gridColSize));
 
         return panel;
     }
@@ -66,7 +89,8 @@ public class Board extends JPanel {
         JButton cell = new JButton("");
 
         cell.setMargin(new Insets(0,0,0,0));
-        cell.setBackground(Color.white);
+        cell.setBackground(CellBackground);
+        cell.putClientProperty("fixed", false);
 //        cell.setFont(new Font("Arial", Font.PLAIN, 10));
 //        cell.setIcon(icon);
 
@@ -89,12 +113,14 @@ public class Board extends JPanel {
                 if(ch == '0') {
                     cell.setText("");
                     values[r][c] = 0;
+                    cell.putClientProperty("fixed", false);
                 }
                 else if(ch >= validChar[0] && ch <= validChar[1]) {
                     cell.setText(String.valueOf(Character.toUpperCase(ch)));
                     values[r][c] = ch - validChar[0] + 1;
+                    cell.putClientProperty("fixed", true);
                 }
-                cell.setForeground(Color.black);
+//                cell.setForeground(FixedColor);
 
                 checkConflict(r, c, values[r][c]);
             }
@@ -108,12 +134,20 @@ public class Board extends JPanel {
 
                 for(int i = g[0]; i < g[0] + gridRowSize; i++) {
                     for(int j = g[1]; j < g[1] + gridColSize; j++) {
-                        cells.get(i).get(j).setBackground(Color.decode("0xE0F3FE"));
+                        int key = generateHash(i, j);
+                        cells.get(key).setBackground(DimHighlight);
                     }
                 }
-                cells.get(r).forEach(b -> b.setBackground(Color.decode("0xBBE4FD")));
-                IntStream.range(0, nRows).forEach(rowIndex -> cells.get(rowIndex).get(c).setBackground(Color.decode("0xBBE4FD")));
-                cell.setBackground(Color.decode("0x8CD1FB"));
+                IntStream.range(0, nCols).forEach(colIndex -> {
+                    int key = generateHash(r, colIndex);
+                    cells.get(key).setBackground(SubHighlight);
+                });
+                IntStream.range(0, nRows).forEach(rowIndex -> {
+                    int key = generateHash(rowIndex, c);
+                    cells.get(key).setBackground(SubHighlight);
+                });
+
+                cell.setBackground(Highlight);
             }
 
             @Override
@@ -122,76 +156,110 @@ public class Board extends JPanel {
 
                 for(int i = g[0]; i < g[0] + gridRowSize; i++) {
                     for(int j = g[1]; j < g[1] + gridColSize; j++) {
-                        cells.get(i).get(j).setBackground(Color.white);
+                        int key = generateHash(i, j);
+                        cells.get(key).setBackground(CellBackground);
                     }
                 }
-                cells.get(r).forEach(b -> b.setBackground(Color.white));
-                IntStream.range(0, nRows).forEach(rowIndex -> cells.get(rowIndex).get(c).setBackground(Color.white));
+                IntStream.range(0, nCols).forEach(colIndex -> {
+                    int key = generateHash(r, colIndex);
+                    cells.get(key).setBackground(CellBackground);
+                });
+                IntStream.range(0, nRows).forEach(rowIndex -> {
+                    int key = generateHash(rowIndex, c);
+                    cells.get(key).setBackground(CellBackground);
+                });
             }
         });
 
-        cells.get(r).add(cell);
+        cells.put(generateHash(r, c), cell);
 
         return cell;
     }
 
     private void checkConflict(int r, int c, int v) {
-        // check row
+        // check current row
         AtomicBoolean conflicted = new AtomicBoolean(false);
-        IntStream.range(0, nRows).forEach(col -> {
+        IntStream.range(0, nCols).forEach(col -> {
+            JButton cell = cells.get(generateHash(r, col));
+            boolean fixed = (boolean) cell.getClientProperty("fixed");
+
             if(values[r][col] == v && col != c) {
-                cells.get(r).get(col).setForeground(Color.red);
+                cell.setForeground(ConflictedColor);
                 conflicted.set(true);
             }
+            else if(fixed) cell.setForeground(FixedColor);
+            else cell.setForeground(SolutionColor);
         });
 
-        // check column
-        IntStream.range(0, nCols).forEach(row -> {
+        // check current column
+        IntStream.range(0, nRows).forEach(row -> {
+            JButton cell = cells.get(generateHash(row, c));
+            boolean fixed = (boolean) cell.getClientProperty("fixed");
+
             if(values[row][c] == v && row != r) {
-                cells.get(row).get(c).setForeground(Color.red);
+                cell.setForeground(ConflictedColor);
                 conflicted.set(true);
             }
+            else if(fixed) cell.setForeground(FixedColor);
+            else cell.setForeground(SolutionColor);
         });
 
-        // check grid
+        // check current grid
         int[] origin = getGridOrigin(r, c);
         int rowLim = origin[0] + gridRowSize;
         int colLim = origin[1] + gridColSize;
 
         for(int row = origin[0]; row < rowLim; row++) {
             for(int col = origin[1]; col < colLim; col++) {
+                JButton cell = cells.get(generateHash(row, col));
+                boolean fixed = (boolean) cell.getClientProperty("fixed");
+
                 if(row == r && col == c) continue;
                 if(values[row][col] == v) {
-                    cells.get(row).get(col).setForeground(Color.red);
+                    cell.setForeground(ConflictedColor);
                     conflicted.set(true);
                 }
+                else if(fixed) cell.setForeground(FixedColor);
+                else cell.setForeground(SolutionColor);
             }
         }
 
-        if(conflicted.get()) cells.get(r).get(c).setForeground(Color.red);
+        if(conflicted.get()) cells.get(generateHash(r, c)).setForeground(ConflictedColor);
     }
 
     private int[] getGridOrigin(int r, int c) {
         return new int[] {Math.floorDiv(r, gridRowSize) * gridRowSize, Math.floorDiv(c, gridColSize) * gridColSize};
     }
 
+    private int generateHash(int r, int c) { // generateHash is used as a key in a hashmap of each cell(r, c).
+        return (r + 1) * 100 + c;
+    }
+
     public void solveBoard() {
-        SudokuSolver sudoku = new SudokuSolver(values);
-        values = sudoku.solve();
+        long t0 = new Date().getTime();
 
-        boolean numerical = nRows < 10;
-        IntStream.range(0, nRows).forEach(rowIndex -> {
-            ArrayList<JButton> currentRow = cells.get(rowIndex);
+        try {
+            SudokuSolver sudoku = new SudokuSolver(values);
 
-            IntStream.range(0, nCols).forEach(colIndex -> {
-                JButton cell = currentRow.get(colIndex);
-                if(cell.getText().equals("")) {
-                    if(numerical) cell.setText(String.valueOf(values[rowIndex][colIndex]));
-                    else cell.setText(String.valueOf((char) (values[rowIndex][colIndex] + 64)));
+            values = sudoku.solve();
+
+            IntStream.range(0, nRows).forEach(rowIndex -> {
+                IntStream.range(0, nCols).forEach(colIndex -> {
+                    JButton cell = cells.get(generateHash(rowIndex, colIndex));
+                    if(cell.getText().equals("")) {
+                        if(charNumerical) cell.setText(String.valueOf(values[rowIndex][colIndex]));
+                        else cell.setText(String.valueOf((char) (values[rowIndex][colIndex] + 64)));
 //                        cell.setEnabled(false);
-                    cell.setForeground(Color.decode("0x21a5f9"));
-                }
+                        cell.setForeground(SolutionColor);
+                    }
+                });
             });
-        });
+        }
+        catch (Exception e) {
+            System.out.println("invalid caught!");
+            JOptionPane.showMessageDialog(this, "Make sure the puzzle is valid.", "Invalid input", JOptionPane.ERROR_MESSAGE);
+        }
+
+        System.out.print("Finished in " + (new Date().getTime() - t0) + "ms.");
     }
 }

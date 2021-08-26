@@ -18,7 +18,7 @@ public class SudokuSolver {
     private final ArrayList<int[]> solution = new ArrayList<>();
     private final ArrayList<int[][]> solutions = new ArrayList<>();
 
-    public SudokuSolver(int[][] p) {
+    public SudokuSolver(int[][] p) throws InputMismatchException {
         this.size = p.length;
         this.square = size * size;
         this.sqrt = (int) Math.sqrt(size);
@@ -28,19 +28,9 @@ public class SudokuSolver {
         // Check first if board is valid
         boardIsValid(p);
 
+        System.out.println("invalid!!!!!");
         this.dlx = new ArrayList<>();
         this.dlxHeaders = new ArrayList<>();
-
-        // transform the puzzle clues into an array of [row, col, val] and adding then to the solution
-//        for(int row = 0; row < size; row++) {
-//            for(int col = 0; col < size; col++) {
-//                if(p[row][col] != 0) {
-//                    int[] clue = new int[] {row, col, p[row][col]};
-//                    this.clues.add(clue);
-//                }
-//            }
-//        }
-
 
         createDLXMatrix();
 
