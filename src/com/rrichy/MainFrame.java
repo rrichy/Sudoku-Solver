@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
+
 public class MainFrame extends JFrame implements ActionListener {
     private JButton btn1 = createButton("4x4");
     private JButton btn2 = createButton("9x9");
@@ -20,7 +21,7 @@ public class MainFrame extends JFrame implements ActionListener {
 
     MainFrame() {
         boardSizesPanel = new JPanel();
-        boardSizesPanel.setBackground(Color.PINK);
+//        boardSizesPanel.setBackground(Color.PINK);
 
         boardSizesPanel.add(btn1);
         boardSizesPanel.add(btn2);
@@ -28,7 +29,7 @@ public class MainFrame extends JFrame implements ActionListener {
         boardSizesPanel.add(btn4);
 
         boardPanel = new JPanel();
-        boardPanel.setBackground(Color.yellow);
+//        boardPanel.setBackground(Color.yellow);
 
         board = new Board(9,9);
 
@@ -37,7 +38,7 @@ public class MainFrame extends JFrame implements ActionListener {
         btn2.setEnabled(false);
 
         commandPanel = new JPanel();
-        commandPanel.setBackground(Color.magenta);
+//        commandPanel.setBackground(Color.magenta);
 
         commandPanel.add(solveBtn);
         commandPanel.add(clearBtn);
