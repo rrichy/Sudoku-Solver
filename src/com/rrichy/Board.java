@@ -3,31 +3,29 @@ package com.rrichy;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.IntStream;
 
 
 public class Board extends JPanel {
     private Color CellBackground, Highlight, SubHighlight, DimHighlight, FixedColor, SolutionColor, ConflictedColor;
-    public final int nRows, nCols, gridRowSize, gridColSize;
+    public final int nRows, nCols, gridRowNum, gridColNum;
     public int[][] values;
     private HashMap<Integer, JPanel> grids;
     public HashMap<Integer, JButton> cells;
     private final boolean charNumerical;
     private final char[] validChar = new char[2];
+    private int cellSize = 30;
+    private int rowSelect, colSelect;
 
     Board(int nRows, int nCols) {
         this.nRows = nRows;
         this.nCols = nCols;
-        this.gridRowSize = (int) Math.sqrt(nRows);
-        this.gridColSize = (int) Math.sqrt(nCols);
+        this.gridRowNum = (int) Math.sqrt(nRows);
+        this.gridColNum = (int) Math.sqrt(nCols);
         this.values = new int[nRows][nCols];
 
         this.charNumerical = nRows < 10;
+        this.rowSelect = this.colSelect = -1;
 
         if(charNumerical) {
             validChar[0] = '1';
@@ -38,45 +36,108 @@ public class Board extends JPanel {
             validChar[1] = (char) ('a' + nRows);
         }
 
-        initializeColors();
+        addMouseListener(new MouseListener() {
+            public void mouseClicked(MouseEvent e) {}
+            public void mousePressed(MouseEvent e) {}
+            public void mouseEntered(MouseEvent e) {}
+            public void mouseExited(MouseEvent e) {}
+            public void mouseReleased(MouseEvent e) {
+                rowSelect = (int) Math.floor(e.getY() / cellSize);
+                colSelect = (int) Math.floor(e.getX() / cellSize);
 
-        this.grids = new HashMap<>();
-        this.cells = new HashMap<>();
-
-//        this.setPreferredSize(new Dimension(30 * nRows, 30* nCols));
-        this.setLayout(new GridLayout(gridRowSize, gridColSize, 2, 2));
-        this.setBorder(BorderFactory.createLineBorder(FixedColor, 2));
-        this.setBackground(Color.black);
-
-        for(int i = 0; i < nRows; i += gridRowSize) {
-            for(int j = 0; j < nCols; j += gridColSize) {
-                JPanel gridPanel = createGridPanel();
-                grids.put(generateHash(i, j), gridPanel);
-
-                this.add(gridPanel);
+                System.out.println(String.format("Row: %s, Column: %s", rowSelect, colSelect));
             }
+        });
+
+        setBackground(Color.white);
+//        initializeColors();
+
+
+
+//        this.grids = new HashMap<>();
+//        this.cells = new HashMap<>();
+//
+////        this.setPreferredSize(new Dimension(30 * nRows, 30* nCols));
+//        this.setLayout(new GridLayout(gridRowSize, gridColSize, 2, 2));
+//        this.setBorder(BorderFactory.createLineBorder(FixedColor, 2));
+//        this.setBackground(Color.black);
+//
+//        for(int i = 0; i < nRows; i += gridRowSize) {
+//            for(int j = 0; j < nCols; j += gridColSize) {
+//                JPanel gridPanel = createGridPanel();
+//                grids.put(generateHash(i, j), gridPanel);
+//
+//                this.add(gridPanel);
+//            }
+//        }
+//
+//        for(int r = 0; r < nRows; r++) {
+//            for(int c = 0; c < nCols; c++) {
+//                JButton cell = createCellButton(r, c);
+//
+//                int[] origin = getGridOrigin(r, c);
+//                grids.get(generateHash(origin[0], origin[1])).add(cell);
+//            }
+//        }
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        Graphics2D g2 = (Graphics2D) g;
+
+        paintCell(g2);
+
+        g2.setColor(Color.black);
+        for(int c = 0; c < nCols + 1; c++) {
+            if(c % gridColNum == 0) g2.setStroke(new BasicStroke(2));
+            else g2.setStroke(new BasicStroke(1));
+            g2.drawLine(c * cellSize, 0, c * cellSize, cellSize * nCols);
         }
 
-        for(int r = 0; r < nRows; r++) {
-            for(int c = 0; c < nCols; c++) {
-                JButton cell = createCellButton(r, c);
+        for(int r = 0; r < nRows + 1; r++) {
+            if(r % gridRowNum == 0) g2.setStroke(new BasicStroke(2));
+            else g2.setStroke(new BasicStroke(1));
+            g2.drawLine(0, r * cellSize, cellSize * nRows, r * cellSize);
+        }
 
-                int[] origin = getGridOrigin(r, c);
-                grids.get(generateHash(origin[0], origin[1])).add(cell);
-            }
+        repaint();
+    }
+
+    public Dimension getPreferredSize() {
+        return new Dimension(cellSize * nRows, cellSize * nCols);
+    }
+
+    private void paintCell(Graphics2D g) {
+        if(rowSelect != -1 && colSelect != -1) {
+            int[] origin = getGridOrigin(rowSelect, colSelect);
+            g.setColor(Color.decode("0xE0F3FE"));
+            g.fillRect(origin[1] * cellSize, origin[0] * cellSize, gridColNum * cellSize, gridRowNum * cellSize);
+
+            g.setColor(Color.decode("0xBBE4FD"));
+            g.fillRect(0, rowSelect * cellSize, cellSize * nCols, cellSize);
+            g.fillRect(colSelect * cellSize, 0, cellSize, cellSize * nRows);
+
+            g.setColor(Color.decode("0x8CD1FB"));
+            g.fillRect(colSelect * cellSize, rowSelect * cellSize, cellSize, cellSize);
         }
     }
 
-    private void initializeColors() {
-        CellBackground = Color.white;
-        Highlight = Color.decode("0x8CD1FB");
-        SubHighlight = Color.decode("0xBBE4FD");
-        DimHighlight = Color.decode("0xE0F3FE");
-        FixedColor = Color.black;
-        SolutionColor = Color.decode("0x21a5f9");
-        ConflictedColor = Color.red;
-    }
+//    private void initializeColors() {
+//        CellBackground = Color.white;
+//        Highlight = Color.decode("0x8CD1FB");
+//        SubHighlight = Color.decode("0xBBE4FD");
+//        DimHighlight = Color.decode("0xE0F3FE");
+//        FixedColor = Color.black;
+//        SolutionColor = Color.decode("0x21a5f9");
+//        ConflictedColor = Color.red;
+//    }
 
+    private int[] getGridOrigin(int r, int c) {
+        return new int[] {Math.floorDiv(r, gridRowNum) * gridRowNum, Math.floorDiv(c, gridColNum) * gridColNum};
+    }
+/*
     private JPanel createGridPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(gridRowSize, gridColSize));
@@ -227,9 +288,7 @@ public class Board extends JPanel {
         if(conflicted.get()) cells.get(generateHash(r, c)).setForeground(ConflictedColor);
     }
 
-    private int[] getGridOrigin(int r, int c) {
-        return new int[] {Math.floorDiv(r, gridRowSize) * gridRowSize, Math.floorDiv(c, gridColSize) * gridColSize};
-    }
+
 
     private int generateHash(int r, int c) { // generateHash is used as a key in a hashmap of each cell(r, c).
         return (r + 1) * 100 + c;
@@ -261,5 +320,5 @@ public class Board extends JPanel {
         }
 
         System.out.print("Finished in " + (new Date().getTime() - t0) + "ms.");
-    }
+    }*/
 }
