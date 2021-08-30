@@ -29,9 +29,9 @@ public class MainFrame extends JFrame implements ActionListener {
         boardSizesPanel.add(btn4);
 
         boardPanel = new JPanel();
-//        boardPanel.setBackground(Color.yellow);
+        boardPanel.setBackground(Color.yellow);
 
-        board = new Board(9,9);
+        board = new Board(9, 9);
 
         boardPanel.add(board);
 
@@ -74,17 +74,17 @@ public class MainFrame extends JFrame implements ActionListener {
             button.setEnabled(false);
             handleBoardSizeChange(e);
         }
-        else if(e.getSource() == solveBtn) board.solveBoard();
-        else if(e.getSource() == clearBtn) {
-            boardPanel.removeAll();
-            int nRows = board.nRows;
-            int nCols = board.nCols;
-
-            board = new Board(nRows, nCols);
-            boardPanel.add(board);
-
-            refresh();
-        }
+//        else if(e.getSource() == solveBtn) board.solveBoard();
+//        else if(e.getSource() == clearBtn) {
+//            boardPanel.removeAll();
+//            int nRows = board.nRows;
+//            int nCols = board.nCols;
+//
+//            board = new Board(nRows, nCols);
+//            boardPanel.add(board);
+//
+//            refresh();
+//        }
         else {
 //            handleHighlightSelection(button);
         }
