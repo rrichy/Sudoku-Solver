@@ -3,10 +3,6 @@ package com.rrichy;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.stream.IntStream;
-
 
 public class MainFrame extends JFrame implements ActionListener {
     private JButton btn1 = createButton("4x4");
@@ -29,7 +25,7 @@ public class MainFrame extends JFrame implements ActionListener {
         boardSizesPanel.add(btn4);
 
         boardPanel = new JPanel();
-        boardPanel.setBackground(Color.yellow);
+//        boardPanel.setBackground(Color.yellow);
 
         board = new Board(9, 9);
 
@@ -74,19 +70,16 @@ public class MainFrame extends JFrame implements ActionListener {
             button.setEnabled(false);
             handleBoardSizeChange(e);
         }
-//        else if(e.getSource() == solveBtn) board.solveBoard();
-//        else if(e.getSource() == clearBtn) {
-//            boardPanel.removeAll();
-//            int nRows = board.nRows;
-//            int nCols = board.nCols;
-//
-//            board = new Board(nRows, nCols);
-//            boardPanel.add(board);
-//
-//            refresh();
-//        }
-        else {
-//            handleHighlightSelection(button);
+        if(e.getSource() == solveBtn) board.solveBoard();
+        if(e.getSource() == clearBtn) {
+            boardPanel.removeAll();
+            int nRows = board.nRows;
+            int nCols = board.nCols;
+
+            board = new Board(nRows, nCols);
+            boardPanel.add(board);
+
+            refresh();
         }
     }
 
