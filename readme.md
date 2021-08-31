@@ -1,5 +1,5 @@
 # Sudoku Solver by rrichy
-**Version 1.1.0**
+**Version 1.1.1**
 
 It solves in less than 500ms for a 25x25 puzzle!
 
